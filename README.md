@@ -1,5 +1,7 @@
 # ExTermStorage
 
+[![Build Status](https://travis-ci.org/surik/ex_term_storage.svg?branch=master)](https://travis-ci.org/surik/ex_term_storage)
+
 An example of how `Access` behaviour, `Inspect` and `Enumerable` protocols 
 can be used to work with `ETS` as a typical `Keyword` list.
 
