@@ -1,7 +1,7 @@
 defmodule ExTermStorage do
   @moduledoc """
   An example of how `Access` behaviour, `Inspect` and `Enumerable` protocols 
-  can be used to work with `ETS` as a typucal `Keyword` list:
+  can be used to work with `ETS` as a typical `Keyword` list:
 
       iex> t = ExTermStorage.new()
       #ExTermStorage<[]>
@@ -40,6 +40,21 @@ defmodule ExTermStorage do
       iex> t = ExTermStorage.new([a: 1, b: 2])
       iex> for {_, v} <- t, do: v * 2
       [2, 4]
+
+  Enumerable protocol allows use slices:
+
+      iex> t = ExTermStorage.new([a: 1, b: 2, c: 3, d: 4])
+      iex> Enum.slice(t, 1, 2)
+      [b: 2, c: 3]
+
+  Random:
+
+      iex> :rand.seed(:exsplus, {101, 102, 103})
+      iex> t = ExTermStorage.new([a: 1, b: 2, c: 3, d: 4])
+      iex> Enum.random(t)
+      {:a, 1}
+      iex> Enum.random(t)
+      {:d, 4}
 
   And Streams:
 
@@ -137,6 +152,19 @@ defmodule ExTermStorage do
 
   defp reduce(%ExTermStorage{table: t} = container, key, {:cont, acc}, fun), do:
     reduce(container, :ets.next(t, key), fun.(lookup(container, key), acc), fun)
+
+  @doc false
+  def slice(%ExTermStorage{table: t} = container, start, count), do:
+    slice(container, :ets.first(t), start, count)
+
+  defp slice(_container, :'$end_of_table', _start, _count), do: []
+  defp slice(_container, _elem, _start, 0), do: []
+
+  defp slice(%ExTermStorage{table: t} = container, key, 0, count), do:
+    [lookup(container, key) | slice(container, :ets.next(t, key), 0, count - 1)]
+
+  defp slice(%ExTermStorage{table: t} = container, key, start, count), do: 
+    slice(container, :ets.next(t, key), start - 1, count)
 end
 
 defimpl Inspect, for: ExTermStorage do
@@ -153,4 +181,7 @@ defimpl Enumerable, for: ExTermStorage do
   def member?(%ExTermStorage{table: t}, key), do: {:ok, :ets.member(t, key)}
 
   def reduce(container, acc, fun), do: ExTermStorage.reduce(container, acc, fun)
+
+  def slice(%ExTermStorage{table: t} = container), do:
+    {:ok, :ets.info(t, :size), &ExTermStorage.slice(container, &1, &2)}
 end
